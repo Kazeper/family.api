@@ -6,15 +6,13 @@ public interface IPageItemRepo
 {
     Task SaveChanges();
 
-    Task<IEnumerable<PageItem>> GetPageItemsByUserId(int userId);
+    Task<IEnumerable<PageItem>> GetPageItemsByUserEmail(string userEmail);
 
     Task<PageItem> GetPageItemById(int id);
 
     Task AddPageItem(PageItem item);
 
-    Task AddPageItems(IEnumerable<PageItem> items);
-
-    Task UpdatePageItems(IEnumerable<PageItem> items);
+    Task<PageItem> Update(PageItem item);
 
     void DeletePageItem(PageItem item);
 }

@@ -24,31 +24,19 @@ public class PageItemRepo : IPageItemRepo
         await _dataContext.AddAsync(item);
     }
 
-    public async Task AddPageItems(IEnumerable<PageItem> items)
+    public async Task<PageItem> Update(PageItem item)
     {
-        if (items == null)
+        var itemToUpdate = await _dataContext.PageItems.FirstOrDefaultAsync(x => x.Id == item.Id);
+
+        if (itemToUpdate != null)
         {
-            throw new ArgumentNullException(nameof(items));
-        }
-
-        foreach (var item in items)
-        {
-            _dataContext.AddAsync(item);
-        }
-
-        await SaveChanges();
-    }
-
-    public async Task UpdatePageItems(IEnumerable<PageItem> items)
-    {
-        foreach (var item in items)
-        {
-            var itemToUpdate = await _dataContext.PageItems.FirstOrDefaultAsync(x => x.Id == item.Id);
-
+            itemToUpdate.UserId = item.UserId;
             itemToUpdate.IsVisible = item.IsVisible;
             itemToUpdate.ElementName = item.ElementName;
             itemToUpdate.ElementContent = item.ElementContent;
         }
+
+        return itemToUpdate;
     }
 
     public void DeletePageItem(PageItem item)
@@ -66,9 +54,15 @@ public class PageItemRepo : IPageItemRepo
         return await _dataContext.PageItems.FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public async Task<IEnumerable<PageItem>> GetPageItemsByUserId(int userId)
+    public async Task<IEnumerable<PageItem>> GetPageItemsByUserEmail(string userEmail)
     {
-        return await _dataContext.PageItems.AsQueryable().Where(x => x.UserId == userId).ToListAsync();
+        //TODO check 2nd approach
+        var user = _dataContext.Users.FirstOrDefault(x => x.Email == userEmail);
+        if (user == null) return new List<PageItem>();
+
+        return await _dataContext.PageItems.Where(x => x.UserId == user.Id).Include(a => a.User).ToListAsync();
+
+        //return await _dataContext.PageItems.AsQueryable().Where(x => x.User.Email == userEmail).ToListAsync();
     }
 
     public async Task SaveChanges()

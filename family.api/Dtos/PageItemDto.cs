@@ -1,6 +1,4 @@
-﻿using family.api.Models;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace family.api.Dtos;
 
@@ -10,8 +8,10 @@ public class PageItemDto
 
     public int UserId { get; set; }
 
+    [Required]
     public bool IsVisible { get; set; }
 
+    [Required]
     public string ElementName { get; set; }
 
     //consider using obj?

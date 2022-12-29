@@ -18,6 +18,5 @@ public class User
 
     public int AccessFailedCount { get; set; }
 
-    [ForeignKey("FKUser")]
     public ICollection<PageItem> PageItems { get; set; }
 }
