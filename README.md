@@ -9,6 +9,12 @@
 
 ### Create database
 
+Install entity framework:
+```
+dotnet tool install --global dotnet-ef
+```
+
+
 Connection string should be provided in *appsettings.Development.json*. To create/update database specified in connection string run in cmd/powershell:
 ```
 dotnet ef database update
