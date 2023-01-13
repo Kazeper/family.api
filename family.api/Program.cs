@@ -51,10 +51,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var sqlConnBuilder = new SqlConnectionStringBuilder();
-sqlConnBuilder.ConnectionString = builder.Configuration.GetConnectionString("SQLDbConnection");
+var useSqlite = bool.Parse(builder.Configuration["UseSqlite"]);
 
-builder.Services.AddDbContext<AppDataContext>(opt => opt.UseSqlServer(sqlConnBuilder.ConnectionString));
+var sqlConnBuilder = new SqlConnectionStringBuilder();
+sqlConnBuilder.ConnectionString = useSqlite ? builder.Configuration.GetConnectionString("SqliteConnection")
+    : builder.Configuration.GetConnectionString("SQLDbConnection");
+
+Action<DbContextOptionsBuilder> optionsAction = useSqlite ? opt => opt.UseSqlite(sqlConnBuilder.ConnectionString)
+    : opt => opt.UseSqlServer(sqlConnBuilder.ConnectionString);
+
+builder.Services.AddDbContext<AppDataContext>(optionsAction);
 builder.Services.AddScoped<IPageItemRepo, PageItemRepo>();//TODO consider using generic repo
 builder.Services.AddScoped<IUserRepo, UserRepo>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());//not sure whether use automapper or not

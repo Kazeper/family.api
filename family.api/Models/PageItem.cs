@@ -19,6 +19,7 @@ public class PageItem
     [MaxLength(50)]
     public string ElementName { get; set; }
 
-    //consider using obj?
+    //consider using obj? max(500) is tmp
+    [MaxLength(500)]
     public string ElementContent { get; set; }
 }
