@@ -16,6 +16,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Linq;
 using NuGet.Common;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -125,7 +126,19 @@ app.MapPost("api/user/login", async (IUserRepo userRepo, [FromBody] UserLoginDto
 app.MapPost("api/user/register", async (IUserRepo userRepo, [FromBody] UserRegisterDto userRegisterDto) =>
 {
     if (!userRegisterDto.Password.Equals(userRegisterDto.ConfirmPassword))
-        return Results.BadRequest("Password and confirmation password do not match");
+        return Results.BadRequest("Password and confirmation password do not match.");
+
+    if (!MailAddress.TryCreate(userRegisterDto.Email, out MailAddress res))
+    {
+        return Results.BadRequest("Invalid email.");
+    }
+
+    var existingUser = await userRepo.Get(userRegisterDto.Email);
+
+    if (existingUser != null)
+    {
+        return Results.BadRequest("User with provided email alredy exists.");
+    }
 
     await userRepo.Register(new User
     {
@@ -182,6 +195,8 @@ async (IUserRepo userRepo, [FromHeader(Name = "Authorization")] string token, [F
 });
 
 #endregion User
+
+#region PageItem
 
 app.MapGet("api/pageitems",
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -287,5 +302,7 @@ async (IPageItemRepo pageItemRepo, IUserRepo userRepo, IMapper mapper,
 
     return Results.Ok();
 });
+
+#endregion PageItem
 
 app.Run();
