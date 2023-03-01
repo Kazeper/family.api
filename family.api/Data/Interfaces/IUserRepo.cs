@@ -8,8 +8,6 @@ public interface IUserRepo
 
     Task Register(User user);
 
-    Task<bool> ChangePassword(string email, string oldPassword, string newPassword);
-
     Task<User> Update(User user);
 
     Task SaveChanges();
