@@ -2,7 +2,7 @@
 
 ## Requirements
 
-+ [.NET 6](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
++ [.NET 7](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
 + SQL server/[SQL server express](https://download.microsoft.com/download/7/f/8/7f8a9c43-8c8a-4f7c-9f92-83c18d96b681/SQL2019-SSEI-Expr.exe)
 
 ## Initial run
