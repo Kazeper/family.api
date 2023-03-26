@@ -24,6 +24,9 @@ using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
+
+//TODO add builder.Services.AddDataProtection(); ??
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -52,7 +55,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var useSqlite = bool.Parse(builder.Configuration["UseSqlite"]);
+var useSqlite = bool.Parse(builder.Configuration["UseSqlite"] ?? "false");
 
 var sqlConnBuilder = new SqlConnectionStringBuilder();
 sqlConnBuilder.ConnectionString = useSqlite ? builder.Configuration.GetConnectionString("SqliteConnection")
