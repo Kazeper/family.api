@@ -20,9 +20,13 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
+
+//TODO add builder.Services.AddDataProtection(); ??
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -51,7 +55,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var useSqlite = bool.Parse(builder.Configuration["UseSqlite"]);
+var useSqlite = bool.Parse(builder.Configuration["UseSqlite"] ?? "false");
 
 var sqlConnBuilder = new SqlConnectionStringBuilder();
 sqlConnBuilder.ConnectionString = useSqlite ? builder.Configuration.GetConnectionString("SqliteConnection")
@@ -63,6 +67,7 @@ Action<DbContextOptionsBuilder> optionsAction = useSqlite ? opt => opt.UseSqlite
 builder.Services.AddDbContext<AppDataContext>(optionsAction);
 builder.Services.AddScoped<IPageItemRepo, PageItemRepo>();//TODO consider using generic repo
 builder.Services.AddScoped<IUserRepo, UserRepo>();
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());//not sure whether use automapper or not
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
@@ -98,11 +103,14 @@ app.UseHttpsRedirection();
 
 #region User
 
-app.MapPost("api/user/login", async (IUserRepo userRepo, [FromBody] UserLoginDto userLoginDto) =>
+app.MapPost("api/user/login", async (
+    IUserRepo userRepo,
+    IPasswordHasher<User> passwordHasher,
+    [FromBody] UserLoginDto userLoginDto) =>
 {
     var user = await userRepo.Get(userLoginDto.Email);
 
-    if (user == null || !PasswordHasher.Check(user.PasswordHash, userLoginDto.Password).Verified)
+    if (user == null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, userLoginDto.Password) == PasswordVerificationResult.Failed)
         return Results.BadRequest();
 
     var claims = new[]
@@ -129,7 +137,11 @@ app.MapPost("api/user/login", async (IUserRepo userRepo, [FromBody] UserLoginDto
     return Results.Ok(tokenString);
 });
 
-app.MapPost("api/user/register", async (IUserRepo userRepo, [FromBody] UserRegisterDto userRegisterDto) =>
+app.MapPost("api/user/register", async (
+    IPasswordHasher<User> passwordHasher,
+    IUserRepo userRepo,
+    [FromBody] UserRegisterDto userRegisterDto
+    ) =>
 {
     if (!userRegisterDto.Password.Equals(userRegisterDto.ConfirmPassword))
         return Results.BadRequest("Password and confirmation password do not match.");
@@ -143,16 +155,19 @@ app.MapPost("api/user/register", async (IUserRepo userRepo, [FromBody] UserRegis
 
     if (existingUser != null)
     {
-        return Results.BadRequest("User with provided email alredy exists.");
+        return Results.BadRequest("User with provided email already exists.");
     }
 
-    await userRepo.Register(new User
+    var user = new User
     {
         Email = userRegisterDto.Email,
-        PasswordHash = PasswordHasher.Hash(userRegisterDto.Password),
         FirstName = userRegisterDto.FirstName,
         LastName = userRegisterDto.LastName,
-    });
+    };
+
+    user.PasswordHash = passwordHasher.HashPassword(user, userRegisterDto.Password);
+
+    await userRepo.Register(user);
 
     await userRepo.SaveChanges();
 
@@ -167,10 +182,15 @@ app.MapPost("api/user/logout", [Authorize] () =>
 
 app.MapPost("api/user/changepassword",
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-async (IUserRepo userRepo, [FromHeader(Name = "Authorization")] string token, [FromBody] UserChangePasswordDto userChangePasswordDto) =>
+async (
+    IPasswordHasher<User> passwordHasher,
+    IUserRepo userRepo,
+    [FromHeader(Name = "Authorization")] string token,
+    [FromBody] UserChangePasswordDto userChangePasswordDto
+      ) =>
 {
     if (userChangePasswordDto.NewPassword.Equals(userChangePasswordDto.OldPassword))
-        return Results.BadRequest("new password must be different than old one.");
+        return Results.BadRequest("new password must be different than the old one.");
 
     if (!userChangePasswordDto.NewPassword.Equals(userChangePasswordDto.ConfirmNewPassword))
         return Results.BadRequest("new password and confirmation new password do not match");
@@ -189,7 +209,7 @@ async (IUserRepo userRepo, [FromHeader(Name = "Authorization")] string token, [F
 
     if (user == null) return Results.BadRequest();
 
-    user.PasswordHash = PasswordHasher.Hash(userChangePasswordDto.NewPassword);
+    user.PasswordHash = passwordHasher.HashPassword(user, userChangePasswordDto.NewPassword);
 
     var updatedUser = await userRepo.Update(user);
 
